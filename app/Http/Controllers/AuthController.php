@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -11,13 +13,14 @@ class AuthController extends Controller
     }
 
     public function logout(){
-        echo 'logout';
+        session()->forget('user');
+        return redirect()->to('/login');
     }
 
     public function loginSubmit(Request $request){
         $request->validate([
             'text_username' => 'required|email',
-            'text_password' => 'required|min:6|max:16|alpha_num|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,16}$/',
+            'text_password' => 'required|min:6|max:16',
         ],
         [
             'text_username.required' => 'É necessario preencher o campo de email',
@@ -32,6 +35,37 @@ class AuthController extends Controller
         $username = $request->input('text_username');
         $password = $request->input('text_password');
 
-        echo ('OK');
+        $user = User::where('username', $username)
+            ->where('deleted_at', NULL)
+            ->first();
+
+        if (!$user){
+            return redirect()
+                   ->back()
+                   ->withInput()
+                   ->with('loginError', 'Email ou senha incorretos');
+        }
+
+        if (!password_verify($password, $user->password)){
+            return redirect()
+                   ->back()
+                   ->withInput()
+                   ->with('loginError', 'Email ou senha incorretos');
+
+        }
+
+        //update last_login
+        $user->last_login = date('Y-m-d H:i:s');
+        $user->save();
+
+        //login user
+        session([
+            'user' => [
+                'id' => $user->id,
+                'username' => $user->username,
+            ]
+        ]);
+
+        return redirect()->to('/');
     }
 }
