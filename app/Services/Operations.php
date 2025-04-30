@@ -9,7 +9,7 @@ class Operations{
         try{
             return Crypt::decrypt($value);
         } catch(DecryptException $e){
-            return redirect()->route('home');
+            return null;
         }
         return $value;
     }
